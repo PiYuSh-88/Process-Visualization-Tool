@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OS Process Scheduler Visualization</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>OS Process Scheduler Visualization</h1>
+            <div class="controls">
+                <select id="algorithm-select">
+                    <option value="fcfs">First Come First Serve</option>
+                    <option value="sjf">Shortest Job First (Non-Preemptive)</option>
+                    <option value="sjf_preemptive">Shortest Job First (Preemptive)</option>
+                    <option value="rr">Round Robin</option>
+                    <option value="priority">Priority Scheduling</option>
+                    <option value="multilevel_feedback">Multilevel Feedback Queue</option>
+                </select>
+                <button id="start-btn">Start</button>
+                <button id="pause-btn">Pause</button>
+                <button id="reset-btn">Reset</button>
+                <button id="step-btn">Step</button>
+                <select id="speed-select">
+                    <option value="slow">Slow</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="fast">Fast</option>
+                </select>
+            </div>
+        </header>
+
+        <main>
+            <div class="process-management">
+                <h2>Process Management</h2>
+                <div class="process-form">
+                    <div class="form-group">
+                        <label for="burst-time">Burst Time:</label>
+                        <input type="number" id="burst-time" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="arrival-time">Arrival Time:</label>
+                        <input type="number" id="arrival-time" min="0" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Priority (0-4):</label>
+                        <input type="number" id="priority" min="0" max="4" value="0">
+                    </div>
+                    <button id="add-process-btn">Add Process</button>
+                    <button id="generate-random-btn">Generate Random Processes</button>
+                </div>
+                <div class="process-list">
+                    <h3>Current Processes</h3>
+                    <table id="process-list-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Burst Time</th>
+                                <th>Arrival Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="visualization-container">
+                <div class="process-queues">
+                    <h2>Process Queues</h2>
+                    <div class="queue-container">
+                        <div class="queue ready-queue">
+                            <h3>Ready Queue</h3>
+                            <div id="ready-queue"></div>
+                        </div>
+                        <div class="queue waiting-queue">
+                            <h3>Waiting Queue</h3>
+                            <div id="waiting-queue"></div>
+                        </div>
+                        <div class="queue completed-queue">
+                            <h3>Completed Processes</h3>
+                            <div id="completed-queue"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-container">
+                <div class="process-table">
+                    <h2>Process Details</h2>
+                    <table id="process-table">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>Burst Time</th>
+                                <th>Arrival Time</th>
+                                <th>State</th>
+                                <th>Waiting Time</th>
+                                <th>Turnaround Time</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="performance-metrics">
+                    <h2>Performance Metrics</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <h3>Average Waiting Time</h3>
+                            <p id="avg-waiting-time">0.00</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Average Turnaround Time</h3>
+                            <p id="avg-turnaround-time">0.00</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Average Response Time</h3>
+                            <p id="avg-response-time">0.00</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>CPU Utilization</h3>
+                            <p id="cpu-utilization">0.00%</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Throughput</h3>
+                            <p id="throughput">0.00</p>
+                        </div>
+                    </div>
+                    <canvas id="metrics-chart"></canvas>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Socket.IO with the correct URL
+        const socket = io();
+    </script>
+    <script src="{{ url_for('static', filename='js/visualization.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
