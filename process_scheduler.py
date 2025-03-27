@@ -261,7 +261,6 @@ class ProcessScheduler:
                 self.current_process = None
             elif self.current_process.remaining_time % self.quantum == 0:
                 # Move process to lower priority queue
-                self.current_process.priority = min(self.current_process.priority + 1, self.priority_levels - 1)
                 self.current_process.state = ProcessState.READY
                 self.ready_queue.append(self.current_process)
                 self.current_process = None
@@ -274,6 +273,7 @@ class ProcessScheduler:
                 process.turnaround_time = process.end_time - process.arrival_time
 
     def get_processes(self) -> List[Dict]:
+        """Get list of all processes with their current state."""
         return [{
             'pid': p.pid,
             'burst_time': p.burst_time,
@@ -281,11 +281,12 @@ class ProcessScheduler:
             'remaining_time': p.remaining_time,
             'state': p.state.value,
             'waiting_time': p.waiting_time,
-            'turnaround_time': p.turnaround_time
+            'turnaround_time': p.turnaround_time,
+            'priority': p.priority
         } for p in self.processes]
 
     def get_performance_metrics(self) -> Dict:
-        """Calculate and return detailed performance metrics."""
+        """Calculate and return performance metrics."""
         completed = [p for p in self.processes if p.state == ProcessState.TERMINATED]
         if not completed:
             return {
@@ -298,32 +299,26 @@ class ProcessScheduler:
 
         total_waiting_time = sum(p.waiting_time for p in completed)
         total_turnaround_time = sum(p.turnaround_time for p in completed)
-        total_response_time = sum(p.start_time - p.arrival_time for p in completed)
-        
-        # Calculate CPU utilization
-        total_time = self.current_time
-        busy_time = sum(p.burst_time for p in completed)
-        cpu_utilization = (busy_time / total_time) * 100 if total_time > 0 else 0
-
-        # Calculate throughput (processes completed per time unit)
-        throughput = len(completed) / total_time if total_time > 0 else 0
+        total_response_time = sum(p.start_time - p.arrival_time for p in completed if p.start_time is not None)
+        total_burst_time = sum(p.burst_time for p in completed)
+        total_time = max(p.end_time for p in completed) if completed else 0
 
         return {
             'avg_waiting_time': total_waiting_time / len(completed),
             'avg_turnaround_time': total_turnaround_time / len(completed),
             'avg_response_time': total_response_time / len(completed),
-            'cpu_utilization': cpu_utilization,
-            'throughput': throughput
+            'cpu_utilization': (total_burst_time / total_time) * 100 if total_time > 0 else 0,
+            'throughput': len(completed) / total_time if total_time > 0 else 0
         }
 
     def get_current_state(self) -> Dict:
-        """Get current state including performance metrics."""
+        """Get current state of the scheduler."""
         return {
             'current_time': self.current_time,
             'current_process': self.current_process.pid if self.current_process else None,
             'ready_queue': [p.pid for p in self.ready_queue],
             'waiting_queue': [p.pid for p in self.waiting_queue],
             'completed_processes': [p.pid for p in self.completed_processes],
-            'processes': self.get_processes(),
-            'performance_metrics': self.get_performance_metrics()
+            'algorithm': self.algorithm,
+            'is_running': self.is_running
         } 
