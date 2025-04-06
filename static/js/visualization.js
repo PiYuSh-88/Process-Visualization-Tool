@@ -19,16 +19,14 @@ class ProcessVisualizer {
         this.metricsChart = new Chart(metricsCtx, {
             type: 'bar',
             data: {
-                labels: ['Waiting Time', 'Turnaround Time', 'Response Time', 'CPU Utilization', 'Throughput'],
+                labels: ['Waiting Time', 'Turnaround Time', 'Response Time'],
                 datasets: [{
                     label: 'Performance Metrics',
-                    data: [0, 0, 0, 0, 0],
+                    data: [0, 0, 0],
                     backgroundColor: [
                         '#e74c3c',
                         '#e67e22',
-                        '#f1c40f',
-                        '#2ecc71',
-                        '#3498db'
+                        '#f1c40f'
                     ]
                 }]
             },
@@ -69,6 +67,7 @@ class ProcessVisualizer {
                     <td>${process.arrival_time}</td>
                     <td>${process.state}</td>
                     <td>${process.waiting_time || 0}</td>
+                    <td>${process.completion_time || 0}</td>
                     <td>${process.turnaround_time || 0}</td>
                 </tr>
             `)
@@ -83,17 +82,13 @@ class ProcessVisualizer {
             document.getElementById('avg-waiting-time').textContent = metrics.avg_waiting_time.toFixed(2);
             document.getElementById('avg-turnaround-time').textContent = metrics.avg_turnaround_time.toFixed(2);
             document.getElementById('avg-response-time').textContent = metrics.avg_response_time.toFixed(2);
-            document.getElementById('cpu-utilization').textContent = metrics.cpu_utilization.toFixed(2) + '%';
-            document.getElementById('throughput').textContent = metrics.throughput.toFixed(2);
 
             // Update metrics chart
             if (this.metricsChart) {
                 this.metricsChart.data.datasets[0].data = [
                     metrics.avg_waiting_time,
                     metrics.avg_turnaround_time,
-                    metrics.avg_response_time,
-                    metrics.cpu_utilization,
-                    metrics.throughput
+                    metrics.avg_response_time
                 ];
                 this.metricsChart.update();
             }
@@ -104,8 +99,9 @@ class ProcessVisualizer {
 
     createProcessElement(process) {
         if (!process) return '';
+        const color = this.getProcessColor(process.state);
         return `
-            <div class="process ${process.state.toLowerCase()}">
+            <div class="process ${process.state.toLowerCase()}" style="background-color: ${color}">
                 P${process.pid}
             </div>
         `;
@@ -113,12 +109,12 @@ class ProcessVisualizer {
 
     getProcessColor(state) {
         const colors = {
-            'New': '#95a5a6',
-            'Ready': '#3498db',
-            'Running': '#2ecc71',
-            'Waiting': '#f1c40f',
-            'Terminated': '#e74c3c'
+            'new': '#95a5a6',
+            'ready': '#3498db',
+            'running': '#2ecc71',
+            'waiting': '#f1c40f',
+            'terminated': '#e74c3c'
         };
-        return colors[state] || '#95a5a6';
+        return colors[state.toLowerCase()] || '#95a5a6';
     }
 }

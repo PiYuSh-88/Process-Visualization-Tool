@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     const pauseBtn = document.getElementById('pause-btn');
     const resetBtn = document.getElementById('reset-btn');
-    const stepBtn = document.getElementById('step-btn');
     const algorithmSelect = document.getElementById('algorithm-select');
     const speedSelect = document.getElementById('speed-select');
     const addProcessBtn = document.getElementById('add-process-btn');
@@ -18,30 +17,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const priorityInput = document.getElementById('priority');
     const processListTable = document.getElementById('process-list-table').getElementsByTagName('tbody')[0];
 
+    // Make editProcess and deleteProcess globally accessible
+    window.editProcess = function(pid) {
+        const burstTime = prompt('Enter new burst time:');
+        const arrivalTime = prompt('Enter new arrival time:');
+        const priority = prompt('Enter new priority (0-4):');
+        
+        if (burstTime !== null && arrivalTime !== null && priority !== null) {
+            updateProcess(pid, parseInt(burstTime), parseInt(arrivalTime), parseInt(priority));
+        }
+    };
+    
+    window.deleteProcess = function(pid) {
+        if (confirm('Are you sure you want to delete this process?')) {
+            deleteProcess(pid);
+        }
+    };
+
     // Event Listeners
     startBtn.addEventListener('click', startSimulation);
     pauseBtn.addEventListener('click', pauseSimulation);
     resetBtn.addEventListener('click', resetSimulation);
-    stepBtn.addEventListener('click', stepSimulation);
     speedSelect.addEventListener('change', updateSpeed);
     addProcessBtn.addEventListener('click', addProcess);
     generateRandomBtn.addEventListener('click', generateRandomProcesses);
 
     // Socket.IO event handlers
-    socket.on('connect', () => {
-        console.log('Connected to server');
-        updateUIState('connected');
-    });
-
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
-        updateUIState('disconnected');
-    });
-
     socket.on('state_update', (data) => {
         updateVisualization(data);
         updateProcessList(data.processes);
-        updatePerformanceMetrics(data.performance_metrics);
+        visualizer.updateProcessTable(data.processes);
+        visualizer.updateProcessQueues(data.processes, data.ready_queue, data.waiting_queue, data.completed_processes);
+        visualizer.updatePerformanceMetrics(data.performance_metrics);
     });
 
     // Process Management Functions
@@ -245,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             if (response.ok) {
-                updateUIState('running');
                 startSimulationInterval();
                 showNotification('success', data.message);
             } else {
@@ -264,8 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (response.ok) {
-                updateUIState('paused');
                 clearInterval(simulationInterval);
+                showNotification('success', 'Simulation paused');
             }
         } catch (error) {
             console.error('Error pausing simulation:', error);
@@ -279,7 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (response.ok) {
-                updateUIState('stopped');
                 clearInterval(simulationInterval);
                 // Clear visualizations
                 visualizer.updateProcessQueues([], [], [], []);
@@ -288,24 +293,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     metricsChart.destroy();
                     metricsChart = null;
                 }
+                showNotification('success', 'Simulation reset');
             }
         } catch (error) {
             console.error('Error resetting simulation:', error);
-        }
-    }
-
-    async function stepSimulation() {
-        try {
-            const response = await fetch('/api/step', {
-                method: 'POST'
-            });
-            
-            if (response.ok) {
-                const data = await response.json();
-                updateVisualization(data);
-            }
-        } catch (error) {
-            console.error('Error stepping simulation:', error);
         }
     }
 
@@ -325,7 +316,24 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         clearInterval(simulationInterval);
-        simulationInterval = setInterval(stepSimulation, speeds[currentSpeed]);
+        simulationInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/step', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data) {
+                        updateVisualization(data);
+                        updateProcessList(data.processes);
+                        updatePerformanceMetrics(data.performance_metrics);
+                    }
+                }
+            } catch (error) {
+                console.error('Error stepping simulation:', error);
+            }
+        }, speeds[currentSpeed]);
     }
 
     function updateVisualization(data) {
@@ -340,75 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
         visualizer.updateProcessTable(data.processes);
         visualizer.updatePerformanceMetrics(data.performance_metrics);
     }
-
-    function updateUIState(state) {
-        const states = {
-            'connected': {
-                start: true,
-                pause: false,
-                reset: true,
-                step: true
-            },
-            'disconnected': {
-                start: false,
-                pause: false,
-                reset: false,
-                step: false
-            },
-            'running': {
-                start: false,
-                pause: true,
-                reset: true,
-                step: false
-            },
-            'paused': {
-                start: true,
-                pause: false,
-                reset: true,
-                step: true
-            },
-            'stopped': {
-                start: true,
-                pause: false,
-                reset: false,
-                step: true
-            }
-        };
-
-        const buttons = {
-            start: startBtn,
-            pause: pauseBtn,
-            reset: resetBtn,
-            step: stepBtn
-        };
-
-        const buttonStates = states[state];
-        for (const [button, enabled] of Object.entries(buttonStates)) {
-            buttons[button].disabled = !enabled;
-        }
-    }
-
-    // Make functions available globally for onclick handlers
-    window.editProcess = function(pid) {
-        const burstTime = prompt('Enter new burst time:');
-        const arrivalTime = prompt('Enter new arrival time:');
-        const priority = prompt('Enter new priority (0-4):');
-        
-        if (burstTime !== null && arrivalTime !== null && priority !== null) {
-            const newBurstTime = parseInt(burstTime);
-            const newArrivalTime = parseInt(arrivalTime);
-            const newPriority = parseInt(priority);
-            
-            if (!isNaN(newBurstTime) && !isNaN(newArrivalTime) && !isNaN(newPriority) && 
-                newBurstTime > 0 && newArrivalTime >= 0 && newPriority >= 0 && newPriority <= 4) {
-                updateProcess(pid, newBurstTime, newArrivalTime, newPriority);
-            } else {
-                alert('Please enter valid numbers');
-            }
-        }
-    };
-
-    window.deleteProcess = deleteProcess;
 
     // Add notification function
     function showNotification(type, message) {

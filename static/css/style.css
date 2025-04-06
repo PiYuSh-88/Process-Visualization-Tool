@@ -380,4 +380,9 @@ tr:hover {
         transform: translateX(0);
         opacity: 1;
     }
+}
+
+/* Remove connection status styles */
+.connection-status {
+    display: none;
 } 

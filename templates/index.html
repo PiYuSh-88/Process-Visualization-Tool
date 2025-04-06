@@ -19,12 +19,10 @@
                     <option value="sjf_preemptive">Shortest Job First (Preemptive)</option>
                     <option value="rr">Round Robin</option>
                     <option value="priority">Priority Scheduling</option>
-                    <option value="multilevel_feedback">Multilevel Feedback Queue</option>
                 </select>
                 <button id="start-btn">Start</button>
                 <button id="pause-btn">Pause</button>
                 <button id="reset-btn">Reset</button>
-                <button id="step-btn">Step</button>
                 <select id="speed-select">
                     <option value="slow">Slow</option>
                     <option value="medium" selected>Medium</option>
@@ -60,6 +58,7 @@
                                 <th>PID</th>
                                 <th>Burst Time</th>
                                 <th>Arrival Time</th>
+                                <th>Priority</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -99,6 +98,7 @@
                                 <th>Arrival Time</th>
                                 <th>State</th>
                                 <th>Waiting Time</th>
+                                <th>Completion Time</th>
                                 <th>Turnaround Time</th>
                             </tr>
                         </thead>
@@ -120,14 +120,6 @@
                             <h3>Average Response Time</h3>
                             <p id="avg-response-time">0.00</p>
                         </div>
-                        <div class="metric-card">
-                            <h3>CPU Utilization</h3>
-                            <p id="cpu-utilization">0.00%</p>
-                        </div>
-                        <div class="metric-card">
-                            <h3>Throughput</h3>
-                            <p id="throughput">0.00</p>
-                        </div>
                     </div>
                     <canvas id="metrics-chart"></canvas>
                 </div>
@@ -136,8 +128,13 @@
     </div>
 
     <script>
-        // Initialize Socket.IO with the correct URL
-        const socket = io();
+        // Initialize Socket.IO with explicit configuration
+        const socket = io('http://127.0.0.1:5000', {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+        });
     </script>
     <script src="{{ url_for('static', filename='js/visualization.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
